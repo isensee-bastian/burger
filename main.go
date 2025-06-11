@@ -16,63 +16,62 @@ const (
 	imageBasePath = "resources/images/ingredients/png/"
 )
 
-type ingredientType int
-
-const (
-	bunBottom ingredientType = iota
-	bunTop
-	cheese
-	ham
-	ketchup
-	mayo
-	onions
-	patty
-	salad
-	tomatoes
-)
-
-type ingredient struct {
-	name           string
-	ingredientType ingredientType
-	image          *ebiten.Image
+// componentType holds immutable properties of a particular burger component.
+type componentType struct {
+	name  string
+	index int
+	image *ebiten.Image
 }
 
-var ingredients []ingredient
+var allComponentTypes []componentType
+
+type component struct {
+	compType componentType
+	x        int
+	y        int
+}
+
+func newComponent(compType componentType) *component {
+	return &component{compType: compType}
+}
 
 func init() {
-	ingredients = []ingredient{
-		{name: "bun_bottom", ingredientType: bunBottom},
-		{name: "bun_top", ingredientType: bunTop},
-		{name: "cheese", ingredientType: cheese},
-		{name: "ham", ingredientType: ham},
-		{name: "ketchup", ingredientType: ketchup},
-		{name: "mayo", ingredientType: mayo},
-		{name: "onions", ingredientType: onions},
-		{name: "patty", ingredientType: patty},
-		{name: "salad", ingredientType: salad},
-		{name: "tomatoes", ingredientType: tomatoes},
+	allComponentTypes = []componentType{
+		{name: "bun_bottom"},
+		{name: "bun_top"},
+		{name: "cheese"},
+		{name: "ham"},
+		{name: "ketchup"},
+		{name: "mayo"},
+		{name: "onions"},
+		{name: "patty"},
+		{name: "salad"},
+		{name: "tomatoes"},
 	}
 
-	for index, ingredient := range ingredients {
-		path := fmt.Sprintf("%s/%s.png", imageBasePath, ingredient.name)
+	for index, compType := range allComponentTypes {
+		path := fmt.Sprintf("%s/%s.png", imageBasePath, compType.name)
 		image, _, err := ebitenutil.NewImageFromFile(path)
 
 		if err != nil {
-			log.Fatalf("Error while loading image %s: %v", ingredient.name, err)
+			log.Fatalf("Error while loading image %s: %v", compType.name, err)
 		}
 
-		ingredients[index].image = image
+		allComponentTypes[index].index = index
+		allComponentTypes[index].image = image
 	}
 }
 
 type Game struct {
-	ingredientIndex int
-	x               int
-	y               int
+	falling *component
+	pile    []*component
 }
 
 func newGame() *Game {
-	return &Game{}
+	return &Game{
+		falling: newComponent(allComponentTypes[0]),
+		pile:    make([]*component, 0),
+	}
 }
 
 func (g *Game) Update() error {
@@ -80,24 +79,50 @@ func (g *Game) Update() error {
 		return ebiten.Termination
 	}
 
-	g.y += stepPerTick
+	compSize := g.falling.compType.image.Bounds().Size()
+	maxY := height - compSize.Y - 1
 
-	if g.y >= height {
-		g.y = 0
-		g.ingredientIndex = (g.ingredientIndex + 1) % len(ingredients)
+	if len(g.pile) > 0 {
+		maxY = g.pile[len(g.pile)-1].y - (compSize.Y / 2)
 	}
+	//log.Printf("maxY: %d", maxY)
+
+	if maxY < 0 {
+		// Restart the whole piling process.
+		g.pile = make([]*component, 0)
+
+		return nil
+	}
+
+	g.falling.y += stepPerTick
+
+	if g.falling.y > maxY {
+		g.falling.y = maxY
+		g.pile = append(g.pile, g.falling)
+
+		nextComponentIndex := (g.falling.compType.index + 1) % len(allComponentTypes)
+		g.falling = newComponent(allComponentTypes[nextComponentIndex])
+	}
+	//log.Printf("falling.y: %d", g.falling.y)
 
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
+func drawComponent(screen *ebiten.Image, comp *component) {
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(g.x), float64(g.y))
+	opts.GeoM.Translate(float64(comp.x), float64(comp.y))
+	screen.DrawImage(comp.compType.image, opts)
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	drawComponent(screen, g.falling)
+
+	for _, comp := range g.pile {
+		drawComponent(screen, comp)
+	}
+
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) (%f)", g.falling.x, g.falling.y, ebiten.ActualTPS()))
 	//opts.GeoM.Scale(0.2, 0.2)
-
-	screen.DrawImage(ingredients[g.ingredientIndex].image, opts)
-
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) (%f)", g.x, g.y, ebiten.ActualTPS()))
 	//size := g.fruit.Bounds().Size()
 	//x, y := ebiten.CursorPosition()
 	//ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) - (%d, %d) - (%d, %d)", x, y, g.x, g.y, size.X, size.Y))
