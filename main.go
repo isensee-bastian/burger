@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	width         = 1000
-	height        = 1000
+	width         = 1200
+	height        = 1200
 	stepPerTick   = 5
 	imageBasePath = "resources/images/ingredients/png/"
 )
@@ -38,15 +38,17 @@ func newComponent(compType componentType) *component {
 func init() {
 	allComponentTypes = []componentType{
 		{name: "bun_bottom"},
-		{name: "bun_top"},
+		{name: "tomatoes"},
+		{name: "patty_beef"},
+		{name: "ketchup"},
+		{name: "salad"},
+		{name: "patty_vegan"},
+		{name: "mayo"},
 		{name: "cheese"},
 		{name: "ham"},
-		{name: "ketchup"},
-		{name: "mayo"},
 		{name: "onions"},
-		{name: "patty"},
-		{name: "salad"},
-		{name: "tomatoes"},
+		{name: "pickles"},
+		{name: "bun_top"},
 	}
 
 	for index, compType := range allComponentTypes {
@@ -78,6 +80,10 @@ func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
 	}
+	if g.falling == nil {
+		// Piling finished, nothing to update.
+		return nil
+	}
 
 	compSize := g.falling.compType.image.Bounds().Size()
 	maxY := height - compSize.Y - 1
@@ -87,9 +93,10 @@ func (g *Game) Update() error {
 	}
 	//log.Printf("maxY: %d", maxY)
 
-	if maxY < 0 {
-		// Restart the whole piling process.
-		g.pile = make([]*component, 0)
+	if maxY < 0 || len(g.pile) >= len(allComponentTypes) {
+		// Finish the piling process.
+		//g.pile = make([]*component, 0)
+		g.falling = nil
 
 		return nil
 	}
@@ -109,6 +116,11 @@ func (g *Game) Update() error {
 }
 
 func drawComponent(screen *ebiten.Image, comp *component) {
+	if comp == nil {
+		// Nothing to do.
+		return
+	}
+
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(comp.x), float64(comp.y))
 	screen.DrawImage(comp.compType.image, opts)
@@ -121,7 +133,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		drawComponent(screen, comp)
 	}
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) (%f)", g.falling.x, g.falling.y, ebiten.ActualTPS()))
+	//ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) (%f)", g.falling.x, g.falling.y, ebiten.ActualTPS()))
 	//opts.GeoM.Scale(0.2, 0.2)
 	//size := g.fruit.Bounds().Size()
 	//x, y := ebiten.CursorPosition()
