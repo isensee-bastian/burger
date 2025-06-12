@@ -26,6 +26,18 @@ type Game struct {
 	burgers []*Burger
 }
 
+func (g *Game) sellAllowed(burgerIndex int) bool {
+	if burgerIndex < 0 || burgerIndex >= len(g.burgers) {
+		return false
+	}
+
+	return g.burgers[burgerIndex].top() != nil
+}
+
+func (g *Game) sell(burgerIndex int) {
+	g.burgers[burgerIndex] = newBurger()
+}
+
 func (g *Game) move(targetLane int, stepSize int) {
 	if g.falling == nil {
 		// Piling finished, nothing to update.
@@ -116,6 +128,12 @@ func (g *Game) Update() error {
 		g.move(g.falling.lane+1, defaultFallStep)
 	} else if inpututil.KeyPressDuration(ebiten.KeyDown) > 0 {
 		g.move(g.falling.lane, fastFallStep)
+	} else if inpututil.IsKeyJustPressed(ebiten.Key1) && g.sellAllowed(0) {
+		g.sell(0)
+	} else if inpututil.IsKeyJustPressed(ebiten.Key2) && g.sellAllowed(1) {
+		g.sell(1)
+	} else if inpututil.IsKeyJustPressed(ebiten.Key3) && g.sellAllowed(2) {
+		g.sell(2)
 	} else {
 		g.move(g.falling.lane, defaultFallStep)
 	}
