@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	_ "image/png"
 	"log"
+	"math/rand/v2"
 )
 
 const (
@@ -14,6 +15,8 @@ const (
 	height        = 1200
 	stepPerTick   = 5
 	scaleFactor   = 0.4
+	laneCount     = 3
+	laneWidth     = width / laneCount
 	imageBasePath = "resources/images/ingredients/png/"
 )
 
@@ -28,12 +31,30 @@ var allComponentTypes []componentType
 
 type component struct {
 	compType componentType
+	lane     int
 	x        int
 	y        int
 }
 
 func newComponent(compType componentType) *component {
-	return &component{compType: compType}
+	// Spawn the component in the middle lane.
+	lane := laneCount / 2
+
+	return &component{
+		compType: compType,
+		lane:     lane,
+		x:        lane * laneWidth,
+		y:        0,
+	}
+}
+
+func newRandomComponent() *component {
+	if len(allComponentTypes) == 0 {
+		log.Fatal("Component types not initialized yet, cannot create random component")
+	}
+
+	randomType := allComponentTypes[rand.IntN(len(allComponentTypes))]
+	return newComponent(randomType)
 }
 
 func init() {
@@ -66,14 +87,26 @@ func init() {
 }
 
 type Game struct {
+	// falling is the currently moving ingredient that needs to be steered onto a pile.
 	falling *component
-	pile    []*component
+	// lanes represents multiple piles of layered ingredient, from left to right.
+	lanes []*pile
+}
+
+type pile struct {
+	// components contains layers of ingredients from bottom (index 0) to top (index len - 1).
+	components []*component
 }
 
 func newGame() *Game {
+	lanes := make([]*pile, laneCount)
+	for index := range laneCount {
+		lanes[index] = &pile{components: make([]*component, 0)}
+	}
+
 	return &Game{
 		falling: newComponent(allComponentTypes[0]),
-		pile:    make([]*component, 0),
+		lanes:   lanes,
 	}
 }
 
@@ -85,20 +118,28 @@ func (g *Game) Update() error {
 		// Piling finished, nothing to update.
 		return nil
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		g.falling.lane = max(0, g.falling.lane-1)
+		g.falling.x = g.falling.lane * laneWidth
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.falling.lane = min(laneCount-1, g.falling.lane+1)
+		g.falling.x = g.falling.lane * laneWidth
+	}
 
 	// By default, the ingredient should stop moving before at the lower bottom.
 	compHeight := int(float64(g.falling.compType.image.Bounds().Size().Y) * scaleFactor)
 	maxY := height - compHeight - 1
 
-	if len(g.pile) > 0 {
+	currentPile := g.lanes[g.falling.lane]
+
+	if len(currentPile.components) > 0 {
 		// Stop falling when we are halfway over the top most ingredient on the pile (allow some overlay).
-		maxY = g.pile[len(g.pile)-1].y - (compHeight / 2)
+		maxY = currentPile.components[len(currentPile.components)-1].y - (compHeight / 2)
 	}
 	//log.Printf("maxY: %d", maxY)
 
-	if maxY < 0 || len(g.pile) >= len(allComponentTypes) {
+	if maxY < 0 {
 		// Finish the piling process.
-		//g.pile = make([]*component, 0)
 		g.falling = nil
 
 		return nil
@@ -108,10 +149,9 @@ func (g *Game) Update() error {
 
 	if g.falling.y > maxY {
 		g.falling.y = maxY
-		g.pile = append(g.pile, g.falling)
+		currentPile.components = append(currentPile.components, g.falling)
 
-		nextComponentIndex := (g.falling.compType.index + 1) % len(allComponentTypes)
-		g.falling = newComponent(allComponentTypes[nextComponentIndex])
+		g.falling = newRandomComponent()
 	}
 	//log.Printf("falling.y: %d", g.falling.y)
 
@@ -121,8 +161,10 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	drawComponent(screen, g.falling)
 
-	for _, comp := range g.pile {
-		drawComponent(screen, comp)
+	for _, lane := range g.lanes {
+		for _, comp := range lane.components {
+			drawComponent(screen, comp)
+		}
 	}
 
 	//ebitenutil.DebugPrint(screen, fmt.Sprintf("(%d, %d) (%f)", g.falling.x, g.falling.y, ebiten.ActualTPS()))
