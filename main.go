@@ -13,6 +13,7 @@ const (
 	width         = 1200
 	height        = 1200
 	stepPerTick   = 5
+	scaleFactor   = 0.4
 	imageBasePath = "resources/images/ingredients/png/"
 )
 
@@ -85,11 +86,13 @@ func (g *Game) Update() error {
 		return nil
 	}
 
-	compSize := g.falling.compType.image.Bounds().Size()
-	maxY := height - compSize.Y - 1
+	// By default, the ingredient should stop moving before at the lower bottom.
+	compHeight := int(float64(g.falling.compType.image.Bounds().Size().Y) * scaleFactor)
+	maxY := height - compHeight - 1
 
 	if len(g.pile) > 0 {
-		maxY = g.pile[len(g.pile)-1].y - (compSize.Y / 2)
+		// Stop falling when we are halfway over the top most ingredient on the pile (allow some overlay).
+		maxY = g.pile[len(g.pile)-1].y - (compHeight / 2)
 	}
 	//log.Printf("maxY: %d", maxY)
 
@@ -115,17 +118,6 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func drawComponent(screen *ebiten.Image, comp *component) {
-	if comp == nil {
-		// Nothing to do.
-		return
-	}
-
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(comp.x), float64(comp.y))
-	screen.DrawImage(comp.compType.image, opts)
-}
-
 func (g *Game) Draw(screen *ebiten.Image) {
 	drawComponent(screen, g.falling)
 
@@ -141,13 +133,27 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%f", ebiten.ActualTPS()), 0, 10)
 }
 
-func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
+func drawComponent(screen *ebiten.Image, comp *component) {
+	if comp == nil {
+		// Nothing to do.
+		return
+	}
+
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Scale(scaleFactor, scaleFactor)
+	opts.GeoM.Translate(float64(comp.x), float64(comp.y))
+
+	screen.DrawImage(comp.compType.image, opts)
+}
+
+func (g *Game) Layout(width, height int) (screenWidth, screenHeight int) {
 	return width, height
 }
 
 func main() {
 	ebiten.SetWindowSize(width, height)
-	ebiten.SetWindowTitle("Burger Challenge")
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	ebiten.SetWindowTitle("Burger Stash")
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatalf("Error while running game loop: %v", err)
