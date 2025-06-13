@@ -26,6 +26,23 @@ You should hear some audio effects while playing the game, e.g. when selling a b
 * Open following config file for editing: `/etc/modprobe.d/alsa-base.conf`
 * Append an option to disable the possibly problematic module: `options snd-hda-intel model=auto blacklist snd_soc_avs`
 
+### Media Sources
+
+Thank you to all creators of the included free images and sounds.
+
+* For image sources and attributions see `resources/images/sources/sources.md`
+* For sound sources and attributions see `resources/sounds/sources.md`
+
+### Tools Used
+
+* [Go](https://go.dev/) as the general programming language.
+* [Ebitengine](https://ebitengine.org/) for building a 2D game.
+* [GIMP](https://www.gimp.org) for extracting ingredient images from source pictures.
+* [ffmpeg](https://ffmpeg.org/) for adapting audio properties like sample size and volume.
+
 ### Improvement Ideas
 
+* Consider an intro screen that explains how to play the game.
 * Improve logging, e.g. use `slog` for more structured logging, revisit and introduce logging with proper log levels and configuration.
+* Simplify implementation of `Game.move` method. Avoid recursive call for handling lane change not possible.
+* Improve audio control for playing sounds, seems like actual volume is not influenced by system volume, at least on Linux.

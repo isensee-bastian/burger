@@ -1,7 +1,7 @@
 # Image Sources
 
 ## License
-https://unsplash.com/license
+Unsplash License: https://unsplash.com/license
 
 ## burger_ingredients_01.jpg
 https://unsplash.com/photos/yellow-rose-on-yellow-paper-ai_tF7LNHYo?utm_content=creditShareLink&utm_medium=referral&utm_source=unsplash

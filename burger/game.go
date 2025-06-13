@@ -2,10 +2,8 @@ package burger
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	_ "image/png"
-	"log"
 )
 
 const (
@@ -25,7 +23,8 @@ type Game struct {
 	// burgers represents multiple stacks of layered ingredient Parts, ordered from left to right (lanes).
 	burgers []*Burger
 
-	audioSell *audio.Player
+	audioSell    *AudioPlayer
+	audioStacked *AudioPlayer
 }
 
 func NewGame() *Game {
@@ -36,16 +35,16 @@ func NewGame() *Game {
 	}
 
 	return &Game{
-		falling:   newRandomPart(),
-		burgers:   burgers,
-		audioSell: newMp3Player("cash_register.mp3"),
+		falling:      newRandomPart(),
+		burgers:      burgers,
+		audioSell:    newMp3AudioPlayer("cash_register.mp3"),
+		audioStacked: newMp3AudioPlayer("plop.mp3"),
 	}
 }
 
 func (g *Game) Close() {
-	if g.audioSell != nil {
-		_ = g.audioSell.Close()
-	}
+	g.audioSell.Close()
+	g.audioStacked.Close()
 }
 
 func (g *Game) sellAllowed(burgerIndex int) bool {
@@ -58,14 +57,7 @@ func (g *Game) sellAllowed(burgerIndex int) bool {
 
 func (g *Game) sell(burgerIndex int) {
 	g.burgers[burgerIndex] = newBurger()
-
-	err := g.audioSell.Rewind()
-	if err == nil {
-		g.audioSell.Play()
-	} else {
-		// Logging is sufficient here as playing sounds is not critical for the overall gameplay.
-		log.Printf("Error on rewinding audio: %v", err)
-	}
+	g.audioSell.Replay()
 }
 
 func (g *Game) move(targetLane int, stepSize int) {
@@ -125,6 +117,8 @@ func (g *Game) move(targetLane int, stepSize int) {
 		// We hit the bottom or the top most Part of a Burger. Add the layer to the burger and spawn a new Part.
 		g.falling.move(g.falling.x, maxY)
 		targetBurger.add(g.falling)
+		g.audioStacked.Replay()
+
 		g.falling = newRandomPart()
 	}
 }
