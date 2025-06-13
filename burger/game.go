@@ -36,7 +36,7 @@ func NewGame() *Game {
 	orders := make([]*Burger, laneCount)
 
 	for lane := range laneCount {
-		burgers[lane] = newEmptyBurger()
+		burgers[lane] = newEmptyBurger(lane)
 		orders[lane] = newRandomBurger(7, lane)
 	}
 
@@ -63,7 +63,7 @@ func (g *Game) sellAllowed(lane int) bool {
 }
 
 func (g *Game) sell(lane int) {
-	g.burgers[lane] = newEmptyBurger()
+	g.burgers[lane] = newEmptyBurger(lane)
 	g.orders[lane] = newRandomBurger(7, lane)
 	g.audioSell.Replay()
 }
@@ -79,11 +79,12 @@ func (g *Game) move(targetLane int, stepSize int) {
 		targetLane = g.falling.lane
 	}
 
-	// By default, if there is no started burger yet, the ingredient part should stop moving at the lower bottom.
-	partHeight := g.falling.height()
-	maxY := BuildSectionHeight - partHeight - 1
-
 	targetBurger := g.burgers[targetLane]
+
+	// By default, if there is no started burger yet, the ingredient part should stop moving when we hit the plate (allow large overlay).
+	partHeight := g.falling.height()
+	maxY := targetBurger.plate.y - (partHeight / 5)
+
 	topPart := targetBurger.top()
 
 	if topPart != nil {

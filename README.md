@@ -52,3 +52,6 @@ Thank you to all creators of the included free images and sounds.
 * Check screen resizing and behavior on screens with smaller / larger sizes.
 * Improve layout, separate build from order section more clearly.
 * Track points, consider adding a timer.
+* For deployment embed resource files like images and sounds into the application (more reliable loading).
+* Consider refactoring for common image wrappers like Part and Plate (extract common parts, reuse where possible).
+* Improve visibility of mayo and onions (make sure they can be distinguished in the order view).
