@@ -7,14 +7,16 @@ import (
 )
 
 const (
-	ScreenWidth  = 1200
-	ScreenHeight = 1200
+	ScreenWidth        = 1200
+	ScreenHeight       = 1200
+	BuildSectionHeight = 1000
 
-	defaultFallStep = 5
-	fastFallStep    = defaultFallStep * 4
-	scaleFactor     = 0.4
-	laneCount       = 3
-	laneWidth       = ScreenWidth / laneCount
+	defaultFallStep  = 5
+	fastFallStep     = defaultFallStep * 4
+	buildScaleFactor = 0.4
+	orderScaleFactor = 0.2
+	laneCount        = 3
+	laneWidth        = ScreenWidth / laneCount
 )
 
 type Game struct {
@@ -22,6 +24,8 @@ type Game struct {
 	falling *Part
 	// burgers represents multiple stacks of layered ingredient Parts, ordered from left to right (lanes).
 	burgers []*Burger
+	// orders represents specific burger compositions requested by customers, ordered from left to right (lanes).
+	orders []*Burger
 
 	audioSell    *AudioPlayer
 	audioStacked *AudioPlayer
@@ -29,14 +33,17 @@ type Game struct {
 
 func NewGame() *Game {
 	burgers := make([]*Burger, laneCount)
+	orders := make([]*Burger, laneCount)
 
-	for index := range laneCount {
-		burgers[index] = newBurger()
+	for lane := range laneCount {
+		burgers[lane] = newEmptyBurger()
+		orders[lane] = newRandomBurger(7, lane)
 	}
 
 	return &Game{
-		falling:      newRandomPart(),
+		falling:      newRandomFallingPart(),
 		burgers:      burgers,
+		orders:       orders,
 		audioSell:    newMp3AudioPlayer("cash_register.mp3"),
 		audioStacked: newMp3AudioPlayer("plop.mp3"),
 	}
@@ -47,16 +54,17 @@ func (g *Game) Close() {
 	g.audioStacked.Close()
 }
 
-func (g *Game) sellAllowed(burgerIndex int) bool {
-	if burgerIndex < 0 || burgerIndex >= len(g.burgers) {
+func (g *Game) sellAllowed(lane int) bool {
+	if lane < 0 || lane >= len(g.burgers) {
 		return false
 	}
 
-	return g.burgers[burgerIndex].top() != nil
+	return g.burgers[lane].top() != nil
 }
 
-func (g *Game) sell(burgerIndex int) {
-	g.burgers[burgerIndex] = newBurger()
+func (g *Game) sell(lane int) {
+	g.burgers[lane] = newEmptyBurger()
+	g.orders[lane] = newRandomBurger(7, lane)
 	g.audioSell.Replay()
 }
 
@@ -73,7 +81,7 @@ func (g *Game) move(targetLane int, stepSize int) {
 
 	// By default, if there is no started burger yet, the ingredient part should stop moving at the lower bottom.
 	partHeight := g.falling.height()
-	maxY := ScreenHeight - partHeight - 1
+	maxY := BuildSectionHeight - partHeight - 1
 
 	targetBurger := g.burgers[targetLane]
 	topPart := targetBurger.top()
@@ -119,7 +127,7 @@ func (g *Game) move(targetLane int, stepSize int) {
 		targetBurger.add(g.falling)
 		g.audioStacked.Replay()
 
-		g.falling = newRandomPart()
+		g.falling = newRandomFallingPart()
 	}
 }
 
@@ -159,6 +167,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	for _, burger := range g.burgers {
 		burger.draw(screen)
+	}
+
+	for _, order := range g.orders {
+		order.draw(screen)
 	}
 }
 

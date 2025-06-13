@@ -46,3 +46,9 @@ Thank you to all creators of the included free images and sounds.
 * Improve logging, e.g. use `slog` for more structured logging, revisit and introduce logging with proper log levels and configuration.
 * Simplify implementation of `Game.move` method. Avoid recursive call for handling lane change not possible.
 * Improve audio control for playing sounds, seems like actual volume is not influenced by system volume, at least on Linux.
+* Add automated tests where easily possible.
+* Consider switching from an all ingredients slice to a map structure to support lookups (ordering is not important).
+* Improve randomness of burgers, e.g. exclude mix of meat and veggie patties, avoid too many repetitive etc.
+* Check screen resizing and behavior on screens with smaller / larger sizes.
+* Improve layout, separate build from order section more clearly.
+* Track points, consider adding a timer.

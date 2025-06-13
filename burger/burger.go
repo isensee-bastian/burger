@@ -51,31 +51,33 @@ func init() {
 // Part is a specific instances of an ingredient with a specific position on the screen. Note that there can be multiple
 // Parts of the same Ingredient, but at different locations on the screen, e.g. multiple pickle instances.
 type Part struct {
-	ingredient Ingredient
-	lane       int
-	x          int
-	y          int
+	ingredient  Ingredient
+	lane        int
+	x           int
+	y           int
+	scaleFactor float64
 }
 
-func newPart(ingredient Ingredient) *Part {
-	// Spawn the Part in the middle lane.
-	lane := laneCount / 2
-
+func newPart(ingredient Ingredient, lane int, scaleFactor float64) *Part {
 	return &Part{
-		ingredient: ingredient,
-		lane:       lane,
-		x:          lane * laneWidth,
-		y:          0,
+		ingredient:  ingredient,
+		lane:        lane,
+		x:           lane * laneWidth,
+		y:           0,
+		scaleFactor: scaleFactor,
 	}
 }
 
-func newRandomPart() *Part {
+func newRandomFallingPart() *Part {
 	if len(allIngredients) == 0 {
 		log.Fatal("Ingredients not initialized yet, cannot create random part")
 	}
 	randomIngredient := allIngredients[rand.IntN(len(allIngredients))]
 
-	return newPart(randomIngredient)
+	// Spawn the Part in the middle lane.
+	lane := laneCount / 2
+
+	return newPart(randomIngredient, lane, buildScaleFactor)
 }
 
 func (p *Part) move(x, y int) {
@@ -85,12 +87,12 @@ func (p *Part) move(x, y int) {
 
 func (p *Part) height() int {
 	// Account for the scale factor when calculating the images height.
-	return int(float64(p.ingredient.image.Bounds().Size().Y) * scaleFactor)
+	return int(float64(p.ingredient.image.Bounds().Size().Y) * p.scaleFactor)
 }
 
 func (p *Part) draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Scale(scaleFactor, scaleFactor)
+	opts.GeoM.Scale(p.scaleFactor, p.scaleFactor)
 	opts.GeoM.Translate(float64(p.x), float64(p.y))
 
 	screen.DrawImage(p.ingredient.image, opts)
@@ -101,8 +103,40 @@ type Burger struct {
 	stack []*Part
 }
 
-func newBurger() *Burger {
+func newEmptyBurger() *Burger {
 	return &Burger{stack: make([]*Part, 0)}
+}
+
+func newRandomBurger(partCount int, lane int) *Burger {
+	if len(allIngredients) == 0 {
+		log.Fatal("Ingredients not initialized yet, cannot create random part")
+	}
+
+	stack := make([]*Part, partCount)
+
+	// Always start with a bottom bun and finsh with a top bun.
+	bottom := newPart(allIngredients[0], lane, orderScaleFactor)
+	top := newPart(allIngredients[len(allIngredients)-1], lane, orderScaleFactor)
+	stack[0] = bottom
+	stack[partCount-1] = top
+
+	for index := 1; index < partCount-1; index++ {
+		// Pick a random ingredient, avoid repeating a bottom or top bun.
+		randomIngredient := allIngredients[rand.IntN(len(allIngredients)-2)+1]
+
+		stack[index] = newPart(randomIngredient, lane, orderScaleFactor)
+	}
+
+	// Set y position starting from the bottom ingredient all the way up.
+	currentY := ScreenHeight - bottom.height() - 1
+
+	for _, part := range stack {
+		part.y = currentY
+		// Allow some overlay for the ingredients.
+		currentY -= part.height() / 2
+	}
+
+	return &Burger{stack: stack}
 }
 
 func (b *Burger) top() *Part {
