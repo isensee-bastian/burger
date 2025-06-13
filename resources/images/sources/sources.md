@@ -1,4 +1,4 @@
-# Image sources
+# Image Sources
 
 ## License
 https://unsplash.com/license

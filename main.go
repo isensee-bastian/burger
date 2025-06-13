@@ -11,7 +11,10 @@ func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("Burger Stacker")
 
-	if err := ebiten.RunGame(burger.NewGame()); err != nil {
+	game := burger.NewGame()
+	defer game.Close()
+
+	if err := ebiten.RunGame(game); err != nil {
 		log.Fatalf("Error while running game loop: %v", err)
 	}
 }

@@ -2,8 +2,10 @@ package burger
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	_ "image/png"
+	"log"
 )
 
 const (
@@ -15,8 +17,6 @@ const (
 	scaleFactor     = 0.4
 	laneCount       = 3
 	laneWidth       = ScreenWidth / laneCount
-
-	imageBasePath = "resources/images/ingredients/png/"
 )
 
 type Game struct {
@@ -24,6 +24,28 @@ type Game struct {
 	falling *Part
 	// burgers represents multiple stacks of layered ingredient Parts, ordered from left to right (lanes).
 	burgers []*Burger
+
+	audioSell *audio.Player
+}
+
+func NewGame() *Game {
+	burgers := make([]*Burger, laneCount)
+
+	for index := range laneCount {
+		burgers[index] = newBurger()
+	}
+
+	return &Game{
+		falling:   newRandomPart(),
+		burgers:   burgers,
+		audioSell: newMp3Player("cash_register.mp3"),
+	}
+}
+
+func (g *Game) Close() {
+	if g.audioSell != nil {
+		_ = g.audioSell.Close()
+	}
 }
 
 func (g *Game) sellAllowed(burgerIndex int) bool {
@@ -36,6 +58,14 @@ func (g *Game) sellAllowed(burgerIndex int) bool {
 
 func (g *Game) sell(burgerIndex int) {
 	g.burgers[burgerIndex] = newBurger()
+
+	err := g.audioSell.Rewind()
+	if err == nil {
+		g.audioSell.Play()
+	} else {
+		// Logging is sufficient here as playing sounds is not critical for the overall gameplay.
+		log.Printf("Error on rewinding audio: %v", err)
+	}
 }
 
 func (g *Game) move(targetLane int, stepSize int) {
@@ -99,19 +129,6 @@ func (g *Game) move(targetLane int, stepSize int) {
 	}
 }
 
-func NewGame() *Game {
-	burgers := make([]*Burger, laneCount)
-
-	for index := range laneCount {
-		burgers[index] = newBurger()
-	}
-
-	return &Game{
-		falling: newRandomPart(),
-		burgers: burgers,
-	}
-}
-
 func (g *Game) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		// Signal that the game shall terminate normally.
@@ -128,11 +145,11 @@ func (g *Game) Update() error {
 		g.move(g.falling.lane+1, defaultFallStep)
 	} else if inpututil.KeyPressDuration(ebiten.KeyDown) > 0 {
 		g.move(g.falling.lane, fastFallStep)
-	} else if inpututil.IsKeyJustPressed(ebiten.Key1) && g.sellAllowed(0) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDigit1) && g.sellAllowed(0) {
 		g.sell(0)
-	} else if inpututil.IsKeyJustPressed(ebiten.Key2) && g.sellAllowed(1) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDigit2) && g.sellAllowed(1) {
 		g.sell(1)
-	} else if inpututil.IsKeyJustPressed(ebiten.Key3) && g.sellAllowed(2) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDigit3) && g.sellAllowed(2) {
 		g.sell(2)
 	} else {
 		g.move(g.falling.lane, defaultFallStep)

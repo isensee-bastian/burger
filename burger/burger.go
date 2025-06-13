@@ -8,6 +8,10 @@ import (
 	"math/rand/v2"
 )
 
+const (
+	imageBasePath = "resources/images/ingredients/png/"
+)
+
 // Ingredient defines common properties of a particular Burger Part, e.g. the name and image of a tomato or cheese layer.
 type Ingredient struct {
 	name  string
