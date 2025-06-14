@@ -91,8 +91,8 @@ func newPart(ingredient Ingredient, lane int, scaleFactor float64) *Part {
 	return &Part{
 		ingredient:  ingredient,
 		lane:        lane,
-		x:           lane * laneWidth,
-		y:           0,
+		x:           ScreenBorderSize + lane*laneWidth,
+		y:           ScreenBorderSize,
 		scaleFactor: scaleFactor,
 	}
 }
@@ -136,7 +136,7 @@ type Burger struct {
 func newEmptyBurger(lane int) *Burger {
 	plate := &Plate{
 		image:       plateImage,
-		x:           lane * laneWidth,
+		x:           ScreenBorderSize + lane*laneWidth,
 		scaleFactor: buildScaleFactor,
 	}
 	plate.y = BuildSectionHeight - plate.height() - 1
@@ -167,12 +167,12 @@ func newRandomBurger(partCount int, lane int) *Burger {
 
 	plate := &Plate{
 		image:       plateImage,
-		x:           lane * laneWidth,
+		x:           ScreenBorderSize + lane*laneWidth,
 		scaleFactor: orderScaleFactor,
 	}
 
 	// Set y position starting from the plate, then bottom ingredient all the way up to the top.
-	currentY := ScreenHeight - plate.height() - 1
+	currentY := ScreenHeight - ScreenBorderSize - plate.height() - 1
 	plate.y = currentY
 
 	// Allow a large overlay for the first ingredient on the plate.

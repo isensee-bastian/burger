@@ -1,6 +1,7 @@
 package burger
 
 import (
+	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	_ "image/png"
@@ -16,7 +17,8 @@ const (
 	buildScaleFactor = 0.4
 	orderScaleFactor = 0.2
 	laneCount        = 3
-	laneWidth        = ScreenWidth / laneCount
+	laneWidth        = 350
+	ScreenBorderSize = 10
 )
 
 type Game struct {
@@ -26,6 +28,9 @@ type Game struct {
 	burgers []*Burger
 	// orders represents specific burger compositions requested by customers, ordered from left to right (lanes).
 	orders []*Burger
+
+	// revenue tracks the monetary value earned from selling produced burgers, acting as a score indicator.
+	revenue int
 
 	audioSell    *AudioPlayer
 	audioStacked *AudioPlayer
@@ -65,6 +70,7 @@ func (g *Game) sellAllowed(lane int) bool {
 func (g *Game) sell(lane int) {
 	g.burgers[lane] = newEmptyBurger(lane)
 	g.orders[lane] = newRandomBurger(7, lane)
+	g.revenue += 1
 	g.audioSell.Replay()
 }
 
@@ -120,7 +126,7 @@ func (g *Game) move(targetLane int, stepSize int) {
 	g.falling.lane = targetLane
 
 	// Move our falling Part one step further down as we have not hit the bottom or Burger top yet.
-	g.falling.move(g.falling.lane*laneWidth, g.falling.y+stepSize)
+	g.falling.move(ScreenBorderSize+g.falling.lane*laneWidth, g.falling.y+stepSize)
 
 	if g.falling.y > maxY {
 		// We hit the bottom or the top most Part of a Burger. Add the layer to the burger and spawn a new Part.
@@ -162,6 +168,8 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	drawText(screen, ScreenBorderSize, ScreenBorderSize, fmt.Sprintf("%d $", g.revenue))
+
 	if g.falling != nil {
 		g.falling.draw(screen)
 	}
