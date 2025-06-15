@@ -42,16 +42,19 @@ Thank you to all creators of the included free images and sounds.
 
 ### Improvement Ideas
 
-* Consider an intro screen that explains how to play the game.
+* Consider an intro screen that explains how to play the game and how the score is determined.
 * Improve logging, e.g. use `slog` for more structured logging, revisit and introduce logging with proper log levels and configuration.
 * Simplify implementation of `Game.move` method. Avoid recursive call for handling lane change not possible.
 * Improve audio control for playing sounds, seems like actual volume is not influenced by system volume, at least on Linux.
-* Add automated tests where easily possible.
-* Consider switching from an all ingredients slice to a map structure to support lookups (ordering is not important).
+* Add more automated tests where easily possible.
 * Improve randomness of burgers, e.g. exclude mix of meat and veggie patties, avoid too many repetitive etc.
+* Improve scoring of burgers, e.g. introduce higher weight for unexpected or missing patty types, treat expected / unexpected ingredients in a better way.
 * Check screen resizing and behavior on screens with smaller / larger sizes.
 * Improve layout, separate build from order section more clearly.
-* Track points, consider adding a timer.
-* For deployment embed resource files like images and sounds into the application (more reliable loading).
+* Add a time limit to determine when the game is over.
+* When the game is over (i.e. time is up) show the points more prominently and display each built burger vs ordered burger including points won and lost (reasons).
+* Introduce a forced sell when the middle burger is too high for new ingredients to spawn (the game stops in this case at the moment).
+* For deployment embed all resource, including sounds into the application (more reliable loading).
 * Consider refactoring for common image wrappers like Part and Plate (extract common parts, reuse where possible).
 * Improve visibility of mayo and onions (make sure they can be distinguished in the order view).
+* Check available fonts and if there are any font resources that need to be added.

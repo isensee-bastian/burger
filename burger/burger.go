@@ -1,59 +1,79 @@
 package burger
 
 import (
-	"fmt"
+	"bytes"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/isensee-bastian/burger/resources/images/ingredients/png"
+	"image"
 	"log"
 	"math/rand/v2"
 )
 
+type IngredientType int
+
+// Note that the IngredientType enum values MUST be kept ascending from 0 to N without any gaps for the
+// randomization to work correctly. Moreover, BunBottom and BunTop must be kept at the beginning of the enum.
 const (
-	imageBasePath = "resources/images/ingredients/png/"
+	IngBunBottom IngredientType = iota
+	IngBunTop
+	IngPattyBeef
+	IngPattyVegan
+	IngHam
+	IngTomatoes
+	IngSalad
+	IngKetchup
+	IngMayo
+	IngCheese
+	IngOnions
+	IngPickles
 )
 
 // Ingredient defines common properties of a particular Burger Part, e.g. the name and image of a tomato or cheese layer.
 type Ingredient struct {
-	name  string
+	typ   IngredientType
 	image *ebiten.Image
 }
 
-var allIngredients []Ingredient
+var typeToIngredient = map[IngredientType]Ingredient{}
 
 var plateImage *ebiten.Image
 
 func init() {
-	allIngredients = []Ingredient{
-		{name: "bun_bottom"},
-		{name: "tomatoes"},
-		{name: "patty_beef"},
-		{name: "ketchup"},
-		{name: "salad"},
-		{name: "patty_vegan"},
-		{name: "mayo"},
-		{name: "cheese"},
-		{name: "ham"},
-		{name: "onions"},
-		{name: "pickles"},
-		{name: "bun_top"},
+	typeToRawImage := map[IngredientType][]byte{
+		IngBunBottom:  png.BunBottom,
+		IngBunTop:     png.BunTop,
+		IngPattyBeef:  png.PattyBeef,
+		IngPattyVegan: png.PattyVegan,
+		IngHam:        png.Ham,
+		IngTomatoes:   png.Tomatoes,
+		IngSalad:      png.Salad,
+		IngKetchup:    png.Ketchup,
+		IngMayo:       png.Mayo,
+		IngCheese:     png.Cheese,
+		IngOnions:     png.Onions,
+		IngPickles:    png.Pickles,
 	}
 
-	for index, ingredient := range allIngredients {
-		image, _, err := ebitenutil.NewImageFromFile(fmt.Sprintf("%s/%s.png", imageBasePath, ingredient.name))
+	for typ, rawImage := range typeToRawImage {
+		ingredientImage, _, err := image.Decode(bytes.NewReader(rawImage))
 
 		if err != nil {
-			log.Fatalf("Error while loading ingredient image %s: %v", ingredient.name, err)
+			log.Fatalf("Error while loading image for ingredient type %v: %v", typ, err)
 		}
 
-		allIngredients[index].image = image
+		typeToIngredient[typ] = Ingredient{
+			typ:   typ,
+			image: ebiten.NewImageFromImage(ingredientImage),
+		}
 	}
 
-	var err error
-	plateImage, _, err = ebitenutil.NewImageFromFile(fmt.Sprintf("%s/plate.png", imageBasePath))
+	plateStdImage, _, err := image.Decode(bytes.NewReader(png.Plate))
 
 	if err != nil {
 		log.Fatalf("Error while loading plate image: %v", err)
 	}
+
+	plateImage = ebiten.NewImageFromImage(plateStdImage)
 }
 
 // Plate wraps an image object where burgers can be stacked on.
@@ -98,10 +118,9 @@ func newPart(ingredient Ingredient, lane int, scaleFactor float64) *Part {
 }
 
 func newRandomFallingPart() *Part {
-	if len(allIngredients) == 0 {
-		log.Fatal("Ingredients not initialized yet, cannot create random part")
-	}
-	randomIngredient := allIngredients[rand.IntN(len(allIngredients))]
+	// Note that the IngredientType enum values MUST be kept ascending from 0 to N without any gaps for the
+	// randomization to work correctly.
+	randomIngredient := typeToIngredient[IngredientType(rand.IntN(len(typeToIngredient)))]
 
 	// Spawn the Part in the middle lane.
 	lane := laneCount / 2
@@ -115,7 +134,7 @@ func (p *Part) move(x, y int) {
 }
 
 func (p *Part) height() int {
-	// Account for the scale factor when calculating the images height.
+	// Account for the scale factor when calculating the images' height.
 	return int(float64(p.ingredient.image.Bounds().Size().Y) * p.scaleFactor)
 }
 
@@ -148,19 +167,17 @@ func newEmptyBurger(lane int) *Burger {
 }
 
 func newRandomBurger(partCount int, lane int) *Burger {
-	if len(allIngredients) == 0 {
-		log.Fatal("Ingredients not initialized yet, cannot create random part")
-	}
-
 	stack := make([]*Part, partCount)
 
 	// Always start with a bottom bun and finsh with a top bun.
-	stack[0] = newPart(allIngredients[0], lane, orderScaleFactor)
-	stack[partCount-1] = newPart(allIngredients[len(allIngredients)-1], lane, orderScaleFactor)
+	stack[0] = newPart(typeToIngredient[IngBunBottom], lane, orderScaleFactor)
+	stack[partCount-1] = newPart(typeToIngredient[IngBunTop], lane, orderScaleFactor)
 
 	for index := 1; index < partCount-1; index++ {
 		// Pick a random ingredient, avoid repeating a bottom or top bun.
-		randomIngredient := allIngredients[rand.IntN(len(allIngredients)-2)+1]
+		// Note that the IngredientType enum values MUST be kept ascending from 0 to N without any gaps for the
+		// randomization to work correctly. Moreover, BunBottom and BunTop must be kept at the beginning of the enum.
+		randomIngredient := typeToIngredient[IngredientType(rand.IntN(len(typeToIngredient)-2)+2)]
 
 		stack[index] = newPart(randomIngredient, lane, orderScaleFactor)
 	}
@@ -196,6 +213,17 @@ func (b *Burger) top() *Part {
 	}
 
 	return b.stack[len(b.stack)-1]
+}
+
+// ingredientTypes returns just the burgers ingredient types ordered from bottom to top.
+func (b *Burger) ingredientTypes() []IngredientType {
+	types := make([]IngredientType, len(b.stack))
+
+	for index, part := range b.stack {
+		types[index] = part.ingredient.typ
+	}
+
+	return types
 }
 
 func (b *Burger) add(part *Part) {

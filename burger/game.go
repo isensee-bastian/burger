@@ -68,9 +68,12 @@ func (g *Game) sellAllowed(lane int) bool {
 }
 
 func (g *Game) sell(lane int) {
+	revenue := revenue(g.orders[lane].ingredientTypes(), g.burgers[lane].ingredientTypes())
+	g.revenue += revenue
+
 	g.burgers[lane] = newEmptyBurger(lane)
 	g.orders[lane] = newRandomBurger(7, lane)
-	g.revenue += 1
+
 	g.audioSell.Replay()
 }
 
